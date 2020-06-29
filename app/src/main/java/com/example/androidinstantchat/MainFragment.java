@@ -3,7 +3,6 @@ package com.example.androidinstantchat;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -52,6 +51,7 @@ public class MainFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
 
         FirebaseApp.initializeApp(getActivity());
         if(FirebaseAuth.getInstance().getCurrentUser() == null) {
@@ -132,6 +132,7 @@ public class MainFragment extends Fragment {
 
         private List<ChatMessage> mChatMessageList;
 
+
         public ChatAdapter(List<ChatMessage> list){
             mChatMessageList = list;
         }
@@ -140,14 +141,19 @@ public class MainFragment extends Fragment {
         @Override
         public ChatHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 
-            LayoutInflater layoutInflater = LayoutInflater.from(getContext());
+           LayoutInflater layoutInflater = LayoutInflater.from(getContext());
+
 
             return new ChatHolder(layoutInflater,parent);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ChatHolder holder, int position) {
-            holder.bind(mChatMessageList.get(position));
+
+            ChatMessage chatMessage = mChatMessageList.get(position);
+
+
+            holder.bind(chatMessage);
         }
 
         @Override
@@ -166,25 +172,51 @@ public class MainFragment extends Fragment {
 
     private class ChatHolder extends  RecyclerView.ViewHolder{
 
-        private TextView mMessageUser;
-        private TextView mMessageTime;
-        private TextView mMessageText;
+
+        private TextView mMessageBody1;
+        private TextView mMessageBody2;
+        private TextView mMessageName;
+
+
+
 
        public ChatHolder(LayoutInflater inflater,ViewGroup parent){
            super(inflater.inflate(R.layout.message,parent,false));
 
-           mMessageText = itemView.findViewById(R.id.message_text);
-           mMessageUser = itemView.findViewById(R.id.message_user);
-           mMessageTime = itemView.findViewById(R.id.message_time);
+           mMessageBody1= itemView.findViewById(R.id.message_body1);
+           mMessageBody2= itemView.findViewById(R.id.message_body2);
+           mMessageName = itemView.findViewById(R.id.name);
 
        }
 
-       public void bind(ChatMessage message){
-           mMessageTime.setText(DateFormat.format("dd-MM-yyyy (HH:mm:ss)",
-                   message.getMessageTime()));
 
-           mMessageText.setText(message.getMessageText());
-           mMessageUser.setText(message.getMessageUser());
+
+
+       public void bind(ChatMessage message){
+
+
+            boolean isBelongToCurrentUser = message.getMessageUser().equals(FirebaseAuth.
+                    getInstance().
+                    getCurrentUser().
+                    getDisplayName());
+
+            if(isBelongToCurrentUser){
+                mMessageBody1.setText(message.getMessageText());
+
+                mMessageBody2.setVisibility(View.GONE);
+                mMessageName.setVisibility(View.GONE);
+            }else{
+                mMessageBody2.setText(message.getMessageText());
+                mMessageName.setText(message.getMessageUser());
+                mMessageBody1.setVisibility(View.GONE);
+
+            }
+
+
+           /*
+           mMessageTime.setText(DateFormat.format("dd-MM-yyyy (HH:mm:ss)",
+                   message.getMessageTime())); */
+
 
        }
 

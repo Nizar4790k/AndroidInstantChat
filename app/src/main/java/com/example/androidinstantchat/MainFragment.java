@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.DateFormat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -11,7 +12,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,8 +23,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.androidinstantchat.model.ChatMessage;
 import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.database.FirebaseListAdapter;
-import com.firebase.ui.database.FirebaseListOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -34,10 +32,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
-import com.firebase.ui.database.FirebaseListAdapter;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.CollectionReference;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,8 +45,9 @@ public class MainFragment extends Fragment {
     private EditText mInput;
     private RecyclerView mRecyclerView;
     private ChatAdapter mAdapter;
-    private DatabaseReference mDatabaseReference;
-    private List<ChatMessage> mMChatMessages;
+    private ChatMessageLab mChatMessageLab;
+
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -74,7 +70,7 @@ public class MainFragment extends Fragment {
                     .getDisplayName(),Toast.LENGTH_SHORT).show();
 
             // Load chat room contents
-            displayChatMessages();
+
         }
 
 
@@ -88,23 +84,18 @@ public class MainFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.main_fragment,container,false);
 
-        mMChatMessages = new ArrayList<>();
+
 
         FloatingActionButton fab =
                 view.findViewById(R.id.fab);
 
         mInput = view.findViewById(R.id.input);
 
-        mDatabaseReference = FirebaseDatabase.getInstance().getReference();
 
         mRecyclerView = view.findViewById(R.id.list_of_messages);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-
-
-
-
-
+        mChatMessageLab = new ChatMessageLab();
 
 
         fab.setOnClickListener(new View.OnClickListener() {
@@ -112,25 +103,26 @@ public class MainFragment extends Fragment {
             public void onClick(View view) {
 
 
-                // Read the input field and push a new instance
-                // of ChatMessage to the Firebase database
-                mDatabaseReference
-                        .push()
-                        .setValue(new ChatMessage(mInput.getText().toString(),
-                                FirebaseAuth.getInstance()
-                                        .getCurrentUser()
-                                        .getDisplayName())
-                        );
+                String message = mInput.getText().toString();
+
+                ChatMessage chatMessage = new ChatMessage(message);
+
+
+                mChatMessageLab.addMessage(chatMessage);
+
 
                 // Clear the input
                 mInput.setText("");
 
-                displayChatMessages();
+                updateMessages();
+
             }
         });
 
 
-        
+
+
+
 
 
         return view;
@@ -198,38 +190,12 @@ public class MainFragment extends Fragment {
 
 
 
+
+
     }
 
 
-    private void displayChatMessages(){
 
-        mMChatMessages = new ArrayList<>();
-
-
-
-
-
-
-        if(mMChatMessages.size()==0){
-            return;
-        }
-
-
-        if(mAdapter==null){
-
-
-            mAdapter = new ChatAdapter(mMChatMessages);
-            mRecyclerView.setAdapter(mAdapter);
-
-
-            return;
-
-        } else {
-            mAdapter.setChatMessageList(mMChatMessages);
-            mAdapter.notifyDataSetChanged();
-
-        }
-    }
 
 
     @Override
@@ -245,7 +211,7 @@ public class MainFragment extends Fragment {
                         "Successfully signed in. Welcome!",
                         Toast.LENGTH_LONG)
                         .show();
-                displayChatMessages();
+
             } else {
                 Toast.makeText(activity,
                         "We couldn't sign you in. Please try again later.",
@@ -296,6 +262,100 @@ public class MainFragment extends Fragment {
 
 
     }
+
+
+    public void updateMessages(){
+        List<ChatMessage> chatMessages = mChatMessageLab.getChatMessages();
+
+
+        if(chatMessages==null){
+            return;
+        }
+
+        if(chatMessages.size()==0){
+            return;
+        }
+
+        if(mAdapter==null){
+            mAdapter = new ChatAdapter(chatMessages);
+            mRecyclerView.setAdapter(mAdapter);
+        }else {
+            mAdapter.setChatMessageList(chatMessages);
+            mAdapter.notifyDataSetChanged();
+        }
+
+    }
+
+
+   private class ChatMessageLab {
+
+        private static final String TAG= "CHAT_MESSAGE_LAB";
+
+
+        private DatabaseReference mRootReference;
+        private DatabaseReference mMessageReference;
+
+        private List<ChatMessage> mChatMessages;
+
+        public void addMessage(ChatMessage chatMessage){
+            String id = mRootReference.push().getKey();
+
+            String user = FirebaseAuth.getInstance()
+                    .getCurrentUser()
+                    .getDisplayName();
+
+            chatMessage.setMessageUser(user);
+
+            // Read the input field and push a new instance
+            // of ChatMessage to the Firebase database
+
+            mRootReference.child("messages").child(id).setValue(chatMessage);
+
+        }
+
+        public ChatMessageLab(){
+            mRootReference = FirebaseDatabase.getInstance().getReference();
+            mMessageReference = mRootReference.child("messages");
+
+            mMessageReference.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+                    mChatMessages = new ArrayList<>();
+                    long value=dataSnapshot.getChildrenCount();
+                    Log.d(TAG,"no of children: "+value);
+
+
+                    for(DataSnapshot ds: dataSnapshot.getChildren()){
+
+                        ChatMessage chatMessage = ds.getValue(ChatMessage.class);
+                        mChatMessages.add(chatMessage);
+
+                    }
+
+                    updateMessages();
+
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                }
+            });
+
+        }
+
+
+
+
+        public List<ChatMessage> getChatMessages(){
+            return mChatMessages;
+        }
+
+    }
+
+
+
 
 
 

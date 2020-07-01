@@ -52,26 +52,9 @@ public class MainFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        logIn();
 
-        FirebaseApp.initializeApp(getActivity());
-        if(FirebaseAuth.getInstance().getCurrentUser() == null) {
-            // Start sign in/sign up activity
-            startActivityForResult(
-                    AuthUI.getInstance()
-                            .createSignInIntentBuilder()
-                            .build(),
-                    SIGN_IN_REQUEST_CODE
-            );
-        } else {
-            // User is already signed in. Therefore, display
-            // a welcome Toast
-            Toast.makeText(getActivity(),"Welcome " + FirebaseAuth.getInstance()
-                    .getCurrentUser()
-                    .getDisplayName(),Toast.LENGTH_SHORT).show();
 
-            // Load chat room contents
-
-        }
 
 
 
@@ -280,8 +263,13 @@ public class MainFragment extends Fragment {
                                        Toast.LENGTH_LONG)
                                        .show();
 
-                               // Close activity
-                               activity.finish();
+
+
+                               logIn();
+
+
+
+
                            }
                        });
 
@@ -386,6 +374,27 @@ public class MainFragment extends Fragment {
 
     }
 
+    public void logIn(){
+        FirebaseApp.initializeApp(getActivity());
+        if(FirebaseAuth.getInstance().getCurrentUser() == null) {
+            // Start sign in/sign up activity
+            startActivityForResult(
+                    AuthUI.getInstance()
+                            .createSignInIntentBuilder()
+                            .build(),
+                    SIGN_IN_REQUEST_CODE
+            );
+        } else {
+            // User is already signed in. Therefore, display
+            // a welcome Toast
+            Toast.makeText(getActivity(),"Welcome " + FirebaseAuth.getInstance()
+                    .getCurrentUser()
+                    .getDisplayName(),Toast.LENGTH_SHORT).show();
+
+            // Load chat room contents
+
+        }
+    }
 
 
 

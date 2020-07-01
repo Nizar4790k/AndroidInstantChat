@@ -1,14 +1,19 @@
 package com.example.androidinstantchat;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
 import android.os.Bundle;
 
-public class MainActivity extends AppCompatActivity {
+import com.google.firebase.FirebaseApp;
+
+public class MainActivity extends SingleFragmentActivity{
+
+
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    public Fragment createFragment() {
+        return new MainFragment();
     }
 }
